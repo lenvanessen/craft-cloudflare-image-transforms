@@ -71,7 +71,7 @@ class ImageTransformer extends Component implements ImageTransformerInterface
 		return Collection::make([
 			'width' => $imageTransform->width,
 			'height' => $imageTransform->height,
-			'quality' => $imageTransform->quality,
+			'quality' => $imageTransform->quality ?: Craft::$app->getConfig()->general->defaultImageQuality,
 			'format' => $this->getFormatValue($imageTransform),
 			'fit' => $this->getFitValue($imageTransform),
 			'background' => $this->getBackgroundValue($imageTransform),

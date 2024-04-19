@@ -59,10 +59,4 @@ class CloudflareImageTransforms extends Plugin
             'settings' => $this->getSettings(),
         ]);
     }
-
-    private function attachEventHandlers(): void
-    {
-        // Register event handlers here ...
-        // (see https://craftcms.com/docs/4.x/extend/events.html to get started)
-    }
 }
