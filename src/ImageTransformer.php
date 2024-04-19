@@ -15,132 +15,144 @@ use yii\base\NotSupportedException;
 
 class ImageTransformer extends Component implements ImageTransformerInterface
 {
-	public const SUPPORTED_IMAGE_FORMATS = ['jpg', 'jpeg', 'gif', 'png', 'avif'];
-	protected Asset $asset;
+    public const SUPPORTED_IMAGE_FORMATS = ['jpg', 'jpeg', 'gif', 'png', 'avif'];
+    protected Asset $asset;
 
-	public function getTransformUrl(Asset $asset, ImageTransform $imageTransform, bool $immediately): string
-	{
-		$this->asset = $asset;
-		$this->assertTransformable();
+    public function getTransformUrl(Asset $asset, ImageTransform $imageTransform, bool $immediately): string
+    {
+        $this->asset = $asset;
+        $this->assertTransformable();
 
-		$params = $this->buildTransformParams($imageTransform);
-		return $this->assetUrl($params);
-	}
+        $params = $this->buildTransformParams($imageTransform);
+        return $this->assetUrl($params);
+    }
 
-	protected function assertTransformable(): void
-	{
-		$mimeType = $this->asset->getMimeType();
+    protected function assertTransformable(): void
+    {
+        $mimeType = $this->asset->getMimeType();
 
-		if ($mimeType === 'image/gif' && !Craft::$app->getConfig()->getGeneral()->transformGifs) {
-			throw new NotSupportedException('GIF files shouldn’t be transformed.');
-		}
+        if ($mimeType === 'image/gif' && !Craft::$app->getConfig()->getGeneral()->transformGifs) {
+            throw new NotSupportedException('GIF files shouldn’t be transformed.');
+        }
 
-		if ($mimeType === 'image/svg+xml' && !Craft::$app->getConfig()->getGeneral()->transformSvgs) {
-			throw new NotSupportedException('SVG files shouldn’t be transformed.');
-		}
-	}
-	protected function assetUrl(Collection $params)
-	{
-		$basePath = rtrim(
-			$this->asset->fs->getRootUrl(),
-			'/'
-		);
+        if ($mimeType === 'image/svg+xml' && !Craft::$app->getConfig()->getGeneral()->transformSvgs) {
+            throw new NotSupportedException('SVG files shouldn’t be transformed.');
+        }
+    }
+    protected function assetUrl(Collection $params)
+    {
+        $basePath = rtrim(
+            $this->asset->fs->getRootUrl(),
+            '/'
+        );
 
 
-		$directive = $params->map(fn($v, $k) => "$k=$v")->implode(',');
-		return Html::encodeSpaces(
-			"{$basePath}/cdn-cgi/image/$directive/{$this->asset->getPath()}"
-		);
-	}
+        $directive = $params->map(fn($v, $k) => "$k=$v")->implode(',');
+        return Html::encodeSpaces(
+            "{$basePath}/cdn-cgi/image/$directive/{$this->asset->getPath()}"
+        );
+    }
 
-	/**
-	 * Cloudflare Images does not support purging resized variants individually. URLs starting with /cdn-cgi/ cannot be purged. However, purging of the original image’s URL will also purge all of its resized variants.
-	 * @param Asset $asset
-	 * @return void
-	 */
-	public function invalidateAssetTransforms(Asset $asset): void
-	{
-		if(CloudflareImageTransforms::getInstance()->getSettings()->enableCachePurge) {
-			$job = new PurgeImageCache(['files' => [$asset->getUrl()]]);
-			Craft::$app->getQueue()->push($job);
-		}
-	}
+    /**
+     * Cloudflare Images does not support purging resized variants individually. URLs starting with /cdn-cgi/ cannot be purged. However, purging of the original image’s URL will also purge all of its resized variants.
+     * @param Asset $asset
+     * @return void
+     */
+    public function invalidateAssetTransforms(Asset $asset): void
+    {
+        if(CloudflareImageTransforms::getInstance()->getSettings()->enableCachePurge) {
+            $job = new PurgeImageCache(['files' => [$asset->getUrl()]]);
+            Craft::$app->getQueue()->push($job);
+        }
+    }
 
-	public function buildTransformParams(ImageTransform $imageTransform): Collection
-	{
-		return Collection::make([
-			'width' => $imageTransform->width,
-			'height' => $imageTransform->height,
-			'quality' => $imageTransform->quality ?: Craft::$app->getConfig()->general->defaultImageQuality,
-			'format' => $this->getFormatValue($imageTransform),
-			'fit' => $this->getFitValue($imageTransform),
-			'background' => $this->getBackgroundValue($imageTransform),
-			'gravity' => $this->getGravityValue($imageTransform),
-		])->whereNotNull();
-	}
+    public function buildTransformParams(ImageTransform $imageTransform): Collection
+    {
+        return Collection::make([
+            'width' => $imageTransform->width,
+            'height' => $imageTransform->height,
+            'quality' => $imageTransform->quality ?: Craft::$app->getConfig()->general->defaultImageQuality,
+            'format' => $this->getFormatValue($imageTransform),
+            'fit' => $this->getFitValue($imageTransform),
+            'background' => $this->getBackgroundValue($imageTransform),
+            'gravity' => $this->getGravityValue($imageTransform),
+        ])->whereNotNull();
+    }
 
-	protected function getGravityValue(ImageTransform $imageTransform): ?array
-	{
-		if ($this->asset->getHasFocalPoint()) {
-			return $this->asset->getFocalPoint();
-		}
+    protected function getGravityValue(ImageTransform $imageTransform): ?string
+    {
+        $value = $this->getGravity($imageTransform);
 
-		if ($imageTransform->position === 'center-center') {
-			return null;
-		}
+        if(!$value) {
+            return null;
+        }
 
-		// TODO: maybe just do this in Craft
-		$parts = explode('-', $imageTransform->position);
-		$yPosition = $parts[0] ?? null;
-		$xPosition = $parts[1] ?? null;
+        $value = array_values($value);
 
-		try {
-			$x = match ($xPosition) {
-				'top' => 0,
-				'center' => 0.5,
-				'bottom' => 1,
-			};
-			$y = match ($yPosition) {
-				'top' => 0,
-				'center' => 0.5,
-				'bottom' => 1,
-			};
-		} catch (\UnhandledMatchError $e) {
-			throw new ImageTransformException('Invalid `position` value.');
-		}
+        return "$value[0]x$value[1]";
+    }
+    protected function getGravity(ImageTransform $imageTransform): ?array
+    {
+        if ($this->asset->getHasFocalPoint()) {
+            return $this->asset->getFocalPoint();
+        }
 
-		return [$x, $y];
-	}
+        if ($imageTransform->position === 'center-center') {
+            return null;
+        }
 
-	protected function getBackgroundValue(ImageTransform $imageTransform): ?string
-	{
-		return $imageTransform->mode === 'letterbox'
-			? $imageTransform->fill ?? '#FFFFFF'
-			: null;
-	}
+        // TODO: maybe just do this in Craft
+        $parts = explode('-', $imageTransform->position);
+        $yPosition = $parts[0] ?? null;
+        $xPosition = $parts[1] ?? null;
 
-	protected function getFitValue(ImageTransform $imageTransform): string
-	{
-		// @see https://developers.cloudflare.com/images/image-resizing/url-format/#fit
-		// Cloudflare doesn't have an exact match to `stretch`.
-		// `cover` is close, but will crop instead of stretching.
-		return match ($imageTransform->mode) {
-			'fit' => $imageTransform->upscale ? 'contain' : 'scale-down',
-			'stretch' => 'cover',
-			'letterbox' => 'pad',
-			default => 'crop',
-		};
-	}
+        try {
+            $x = match ($xPosition) {
+                'top' => 0,
+                'center' => 0.5,
+                'bottom' => 1,
+            };
+            $y = match ($yPosition) {
+                'top' => 0,
+                'center' => 0.5,
+                'bottom' => 1,
+            };
+        } catch (\UnhandledMatchError $e) {
+            throw new ImageTransformException('Invalid `position` value.');
+        }
 
-	protected function getFormatValue(ImageTransform $imageTransform): string
-	{
-		if ($imageTransform->format === 'jpg' && $imageTransform->interlace === 'none') {
-			return 'baseline-jpeg';
-		}
+        return [$x, $y];
+    }
 
-		return match ($imageTransform->format) {
-			'jpg' => 'jpeg',
-			default => $imageTransform->format ?? 'auto',
-		};
-	}
+    protected function getBackgroundValue(ImageTransform $imageTransform): ?string
+    {
+        return $imageTransform->mode === 'letterbox'
+            ? $imageTransform->fill ?? '#FFFFFF'
+            : null;
+    }
+
+    protected function getFitValue(ImageTransform $imageTransform): string
+    {
+        // @see https://developers.cloudflare.com/images/image-resizing/url-format/#fit
+        // Cloudflare doesn't have an exact match to `stretch`.
+        // `cover` is close, but will crop instead of stretching.
+        return match ($imageTransform->mode) {
+            'fit' => $imageTransform->upscale ? 'contain' : 'scale-down',
+            'stretch' => 'cover',
+            'letterbox' => 'pad',
+            default => 'crop',
+        };
+    }
+
+    protected function getFormatValue(ImageTransform $imageTransform): string
+    {
+        if ($imageTransform->format === 'jpg' && $imageTransform->interlace === 'none') {
+            return 'baseline-jpeg';
+        }
+
+        return match ($imageTransform->format) {
+            'jpg' => 'jpeg',
+            default => $imageTransform->format ?? 'auto',
+        };
+    }
 }
