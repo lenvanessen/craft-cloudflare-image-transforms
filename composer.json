@@ -1,0 +1,49 @@
+{
+    "name": "lenvanessen/cloudflare-image-transforms",
+    "description": "Offloads image transformations to CloudFlare",
+    "type": "craft-plugin",
+    "license": "mit",
+    "support": {
+        "email": "len@wndr.digital",
+        "issues": "https://github.com/lenvanessen/craft-cloudflare-image-transforms/issues?state=open",
+        "source": "https://github.com/lenvanessen/craft-cloudflare-image-transforms",
+        "docs": "https://github.com/lenvanessen/craft-cloudflare-image-transforms",
+        "rss": "https://github.com/lenvanessen/craft-cloudflare-image-transforms/releases.atom"
+    },
+    "require": {
+        "php": ">=8.0.2",
+        "craftcms/cms": "^4.7.0"
+    },
+    "require-dev": {
+        "craftcms/ecs": "dev-main",
+        "craftcms/phpstan": "dev-main"
+    },
+    "autoload": {
+        "psr-4": {
+            "lenvanessen\\cit\\": "src/"
+        }
+    },
+    "extra": {
+        "handle": "cloudflare-image-transforms",
+        "name": "Cloudflare Image Transforms",
+        "developer": "Len van Essen",
+        "documentationUrl": "https://github.com/lenvanessen/craft-cloudflare-image-transforms",
+        "class": "lenvanessen\\cit\\CloudflareImageTransforms"
+    },
+    "scripts": {
+        "check-cs": "ecs check --ansi",
+        "fix-cs": "ecs check --ansi --fix",
+        "phpstan": "phpstan --memory-limit=1G"
+    },
+    "config": {
+        "sort-packages": true,
+        "platform": {
+            "php": "8.0.2"
+        },
+        "allow-plugins": {
+            "yiisoft/yii2-composer": true,
+            "craftcms/plugin-installer": true
+        }
+    }
+}
+

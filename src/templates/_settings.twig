@@ -1,0 +1,29 @@
+{# @var plugin \lenvanessen\cit\CloudflareImageTransforms #}
+{# @var settings \lenvanessen\cit\models\Settings #}
+
+{% import '_includes/forms.twig' as forms %}
+
+{{ forms.autosuggestField({
+  label: "Zone ID",
+  id: 'zoneId',
+  name: 'zoneId',
+  suggestEnvVars: true,
+  value: settings.zoneId,
+  class: 'zone-id'
+}) }}
+
+{{ forms.autosuggestField({
+  label: "API Key",
+  id: 'apiKey',
+  name: 'apiKey',
+  suggestEnvVars: true,
+  value: settings.apiKey,
+  class: 'api-key'
+}) }}
+
+{{ forms.lightswitchField({
+ label: "Enable Cache Purge",
+ instructions: "Should the cache be purged? This is only needed if your FS doesn't already do this",
+ name: 'enableCachePurge',
+ on: settings.enableCachePurge,
+}) }}
