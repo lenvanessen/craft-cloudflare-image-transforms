@@ -133,12 +133,9 @@ class ImageTransformer extends Component implements ImageTransformerInterface
 
     protected function getFitValue(ImageTransform $imageTransform): string
     {
-        // @see https://developers.cloudflare.com/images/image-resizing/url-format/#fit
-        // Cloudflare doesn't have an exact match to `stretch`.
-        // `cover` is close, but will crop instead of stretching.
         return match ($imageTransform->mode) {
             'fit' => $imageTransform->upscale ? 'contain' : 'scale-down',
-            'stretch' => 'cover',
+            'stretch', 'crop' => 'cover',
             'letterbox' => 'pad',
             default => 'crop',
         };
