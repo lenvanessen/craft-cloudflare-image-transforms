@@ -39,6 +39,7 @@ class ImageTransformer extends Component implements ImageTransformerInterface
             throw new NotSupportedException('SVG files shouldn’t be transformed.');
         }
     }
+    
     protected function assetUrl(Collection $params)
     {
         $basePath = rtrim(
@@ -48,8 +49,23 @@ class ImageTransformer extends Component implements ImageTransformerInterface
 
 
         $directive = $params->map(fn($v, $k) => "$k=$v")->implode(',');
+        
+        $parts = parse_url($basePath);
+
+        // Get zone root URL from the provided asset filesystem root
+        // cdn-cgi is located at the zone root irrespective of where the FS root is on the zone
+        $base = '';
+        if (isset($parts['host'])) {
+            $auth = $parts['user'] ?? '';
+            if (isset($parts['pass'])) $auth .= ":" . ($parts['pass']);
+            if ($auth) $auth .= '@';
+            
+            $base = (isset($parts['scheme']) ? ($parts['scheme'] . ':') : '') . "//{$auth}{$parts['host']}" . (isset($parts['port']) ? (':' . $parts['port']) : '');
+        }
+        
         return Html::encodeSpaces(
-            "{$basePath}/cdn-cgi/image/$directive/{$this->asset->getPath()}"
+            // Add the zone root URL, then add the path beyond the zone root as needed
+            "$base/cdn-cgi/image/$directive" . ($parts['path'] ?? '') . "/{$this->asset->getPath()}"
         );
     }
 
