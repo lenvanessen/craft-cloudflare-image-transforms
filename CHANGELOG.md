@@ -1,4 +1,6 @@
 # Release Notes for Cloudflare Image Transforms
+## 2.1.0
+- Implements better URL support. Thanks to @cornedor and @mashedkeyboard
 ## 2.0.0
 - Support Craft 5
 ## 1.0.3
