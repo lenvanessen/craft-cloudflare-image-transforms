@@ -43,7 +43,7 @@ class ImageTransformer extends Component implements ImageTransformerInterface
     protected function assetUrl(Collection $params)
     {
         $basePath = rtrim(
-            $this->asset->fs->getRootUrl(),
+            $this->asset->fs->getRootUrl() . $this->asset->getVolume()->getSubpath(),
             '/'
         );
 
